@@ -9,67 +9,43 @@ import javafx.stage.Stage;
 import javafx.scene.text.Font;
 import java.util.Scanner;
 
-/**
- * Classe principal que gerencia a Árvore Binária de Busca.
- * Agora, esta classe estende 'Application' para gerenciar corretamente
- * o ciclo de vida da UI do JavaFX.
- */
 public class ArvoreBinaria extends Application {
 
-    // --- Instâncias da UI e da Árvore ---
     private final BinarySearchTree bst = new BinarySearchTree();
-    private Stage visualizerStage; // A única janela para a visualização
-    private Canvas canvas;         // O único canvas que será redesenhado
+    private Stage visualizerStage;
+    private Canvas canvas;
 
-    // --- Lógica Principal da Aplicação ---
     public static void main(String[] args) {
         launch(args);
     }
 
-    /**
-     * Ponto de entrada do JavaFX. Chamado na Thread de UI.
-     * Prepara a janela e inicia a thread do console.
-     */
     @Override
     public void start(Stage primaryStage) {
-        // Ignoramos o primaryStage, pois vamos gerenciar nossa própria janela.
         primaryStage.close();
-
-        // Configura nossa janela persistente (visualizerStage)
         setupVisualizerStage();
 
-        // Inicia o loop do console em uma thread separada para não travar a UI
         Thread consoleThread = new Thread(this::runConsoleLoop);
         consoleThread.setDaemon(true);
         consoleThread.start();
     }
 
-    /**
-     * Configura a janela (Stage) que será usada para exibir a árvore.
-     * Isso é chamado apenas uma vez.
-     */
     private void setupVisualizerStage() {
         visualizerStage = new Stage();
         visualizerStage.setTitle("Visualizador de Árvore Binária de Busca");
 
-        // O canvas começa com um tamanho padrão
-        canvas = new Canvas(600, 400);
+        canvas = new Canvas(800, 600);
 
         Group rootGroup = new Group(canvas);
         Scene scene = new Scene(rootGroup, Color.LIGHTCYAN);
         visualizerStage.setScene(scene);
 
-        // Adicionamos um evento para fechar o programa quando a janela for fechada
-        visualizerStage.setOnCloseRequest(e -> {
+        visualizerStage.setOnCloseRequest(_ -> {
             System.out.println("Janela fechada. Saindo do programa...");
             Platform.exit();
             System.exit(0);
         });
     }
 
-    /**
-     * Contém o loop principal que interage com o usuário no console.
-     */
     private void runConsoleLoop() {
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -84,21 +60,23 @@ public class ArvoreBinaria extends Application {
                 int choice = scanner.nextInt();
                 switch (choice) {
                     case 1:
-                        System.out.print("Digite o valor para INSERIR: ");
+                        System.out.print("Digite um valor inteiro para inserir: ");
                         bst.insert(scanner.nextInt());
                         visualizeTree();
                         break;
                     case 2:
-                        System.out.print("Digite o valor para BUSCAR: ");
+                        System.out.print("Digite um valor inteiro para buscar: ");
                         int valueToSearch = scanner.nextInt();
-                        if (bst.search(valueToSearch)) {
-                            System.out.println("RESULTADO: O valor " + valueToSearch + " foi ENCONTRADO.");
+                        int depth = bst.search(valueToSearch);
+
+                        if (depth != -1) {
+                            System.out.println("RESULTADO: O valor " + valueToSearch + " foi encontrado na profundidade " + depth + ".");
                         } else {
-                            System.out.println("RESULTADO: O valor " + valueToSearch + " NÃO foi encontrado.");
+                            System.out.println("RESULTADO: O valor " + valueToSearch + " não foi encontrado.");
                         }
                         break;
                     case 3:
-                        System.out.print("Digite o valor para REMOVER: ");
+                        System.out.print("Digite um valor inteiro para remover: ");
                         bst.remove(scanner.nextInt());
                         visualizeTree();
                         break;
@@ -106,52 +84,45 @@ public class ArvoreBinaria extends Application {
                         System.out.println("Saindo do programa...");
                         Platform.exit();
                         System.exit(0);
-                        return; // Sai do loop e da thread
+                        return;
                     default:
                         System.out.println("Opção inválida.");
                 }
             } catch (Exception e) {
                 System.out.println("Entrada inválida. Por favor, insira um número inteiro.");
-                scanner.next(); // Limpa o buffer
+                scanner.next();
             }
         }
     }
 
-    /**
-     * Agenda a ATUALIZAÇÃO da janela da árvore na thread correta do JavaFX.
-     */
     private void visualizeTree() {
         Platform.runLater(() -> {
             Node root = bst.getRoot();
             if (root == null) {
-                visualizerStage.hide(); // Se a árvore ficar vazia, esconde a janela
+                visualizerStage.hide();
                 System.out.println("A árvore está vazia. A janela foi fechada.");
                 return;
             }
 
-            // Calcula dinamicamente o novo tamanho necessário para a janela e o canvas
             int height = bst.getHeight();
-            double newWidth = Math.max(600, (int) Math.pow(2, height - 1) * 100);
-            double newHeight = Math.max(400, height * 120);
+            double newWidth = Math.max(800, Math.pow(2, height -1) * 60);
+            double newHeight = Math.max(600, height * 120);
 
-            // Redimensiona o canvas e a janela
             canvas.setWidth(newWidth);
             canvas.setHeight(newHeight);
+            visualizerStage.setWidth(newWidth);
+            visualizerStage.setHeight(newHeight);
 
-            // Redesenha a árvore no canvas existente
             drawTreeOnCanvas(canvas, root);
 
-            // Se a janela não estiver visível, mostra e centraliza
             if (!visualizerStage.isShowing()) {
                 visualizerStage.show();
-                visualizerStage.centerOnScreen();
             }
-            // Traz a janela para a frente, caso esteja atrás de outras
+            visualizerStage.centerOnScreen();
             visualizerStage.toFront();
         });
     }
 
-    // --- CLASSE DA ÁRVORE (sem alterações) ---
     static class BinarySearchTree {
         private Node root;
 
@@ -164,31 +135,49 @@ public class ArvoreBinaria extends Application {
             return current;
         }
 
-        public boolean search(int data) { return searchRec(root, data); }
-        private boolean searchRec(Node current, int data) {
-            if (current == null) return false;
-            if (data == current.data) return true;
-            return data < current.data ? searchRec(current.left, data) : searchRec(current.right, data);
+        public int search(int data) { return searchRec(root, data, 0); }
+        private int searchRec(Node current, int data, int depth) {
+            if (current == null) return -1;
+            if (data == current.data) return depth;
+            if (data < current.data) {
+                return searchRec(current.left, data, depth + 1);
+            } else {
+                return searchRec(current.right, data, depth + 1);
+            }
         }
 
         public void remove(int data) { root = removeRec(root, data); }
         private Node removeRec(Node current, int data) {
             if (current == null) { System.out.println("Valor " + data + " não encontrado."); return null; }
-            if (data == current.data) {
-                if (current.left == null && current.right == null) return null;
-                if (current.right == null) return current.left;
-                if (current.left == null) return current.right;
+            if (data < current.data) {
+                current.left = removeRec(current.left, data);
+                return current;
+            } else if (data > current.data) {
+                current.right = removeRec(current.right, data);
+                return current;
+            } else {
+                if (current.left == null && current.right == null) {
+                    return null;
+                }
+                if (current.right == null) {
+                    return current.left;
+                }
+                if (current.left == null) {
+                    return current.right;
+                }
+
                 int smallestValue = findSmallestValue(current.right);
                 current.data = smallestValue;
                 current.right = removeRec(current.right, smallestValue);
+
                 return current;
             }
-            if (data < current.data) current.left = removeRec(current.left, data);
-            else current.right = removeRec(current.right, data);
-            return current;
         }
 
-        private int findSmallestValue(Node root) { return root.left == null ? root.data : findSmallestValue(root.left); }
+        private int findSmallestValue(Node root) {
+            return root.left == null ? root.data : findSmallestValue(root.left);
+        }
+
         public int getHeight() { return getHeight(root); }
         private int getHeight(Node node) {
             if (node == null) return 0;
@@ -200,7 +189,6 @@ public class ArvoreBinaria extends Application {
         }
     }
 
-    // --- CLASSES DE DESENHO (sem alterações) ---
     static class Node {
         int data; Node left; Node right;
         public Node(int data) { this.data = data; }
