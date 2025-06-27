@@ -1,2 +1,2 @@
 # ArvoreBinDeBusca
-Trabalho de implementação de uma Árvore Binária de Busca, para a disciplina de Resolução de Problema Estruturados - 5º Período
+Trabalho de Estrutura de Dados sobre Árvore Binária de Busca. Implementei um programa em Java que permite interagir com a árvore através de um menu no console e, ao mesmo tempo, exibe a estrutura visualmente em uma janela gráfica, feita utilizando o JavaFX.
